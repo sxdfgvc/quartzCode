@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhengqing.modules.quartz.mapper.QuartzTaskMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.zhengqing.modules.quartz.dao.QuartzJobDto">
+        <id column="JOB_NAME" property="name"/>
+        <result column="TRIGGER_NAME" property="triggerName"/>
+        <result column="JOB_GROUP" property="jobGroupName"/>
+        <result column="TRIGGER_GROUP" property="triggerGroupName"/>
+        <result column="DESCRIPTION" property="description"/>
+        <result column="NEXT_FIRE_TIME" property="nextFireTime"/>
+        <result column="PREV_FIRE_TIME" property="prevFireTime"/>
+        <result column="TRIGGER_STATE" property="triggerState"/>
+        <result column="TRIGGER_TYPE" property="triggerType"/>
+        <result column="CRON_EXPRESSION" property="cronExpression"/>
+        <result column="START_TIME" property="startTime"/>
+        <result column="END_TIME" property="endTime"/>
+    </resultMap>
+
+    <select id="getQuartzList" resultMap="BaseResultMap">
+        SELECT
+        a.`JOB_NAME`,
+        a.`TRIGGER_NAME`,
+        a.`JOB_GROUP`,
+        a.`TRIGGER_GROUP`,
+        a.`TRIGGER_STATE`,
+        a.`DESCRIPTION`,
+        a.`NEXT_FIRE_TIME`,
+        a.`PREV_FIRE_TIME`,
+        a.`TRIGGER_TYPE`,
+        b.`CRON_EXPRESSION`,
+        a.`START_TIME`,
+        a.`END_TIME`
+        FROM
+        `QRTZ_TRIGGERS` a
+        LEFT JOIN `QRTZ_CRON_TRIGGERS` b
+        ON a.`TRIGGER_NAME` = b.`TRIGGER_NAME`
+        WHERE 1=1
+        <if test="filter.name != null">
+            and a.JOB_NAME= #{filter.name}
+        </if>
+    </select>
+</mapper>
