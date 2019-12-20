@@ -72,6 +72,10 @@ spring:
 
       job-store-type: jdbc
 
+    devtools:
+      restart:
+        enabled: true
+
 
 
 management:

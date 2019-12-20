@@ -15,6 +15,8 @@ import java.util.Date;
 public class QuartzJobQueryDto extends BasePageQuery {
     @ApiModelProperty(value = "定时任务名称")
     private String name;
+    @ApiModelProperty(value = "定时任务时间")
+    private String cronExpression;
     @ApiModelProperty(value = "触发器名称")
     private String triggerName;
     @ApiModelProperty(value = "定时任务组")
