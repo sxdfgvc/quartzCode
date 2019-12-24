@@ -17,6 +17,15 @@
         <result column="START_TIME" property="startTime"/>
         <result column="END_TIME" property="endTime"/>
     </resultMap>
+    <resultMap id="QuartzWrongDateResultMap" type="com.zhengqing.modules.quartz.dao.QuartzWrongDateDto">
+        <id column="id" property="id"/>
+        <result column="job_name" property="jobName"/>
+        <result column="description" property="description"/>
+        <result column="wrong_quantity" property="wrongQuantity"/>
+        <result column="create_date" property="createdDate"/>
+        <result column="update_date" property="updateDate"/>
+    </resultMap>
+
 
     <select id="getQuartzList" resultMap="BaseResultMap">
         SELECT
@@ -39,6 +48,49 @@
         WHERE 1=1
         <if test="filter.name != null">
             and a.JOB_NAME= #{filter.name}
+        </if>
+    </select>
+
+    <select id="getWrongJobDate" resultMap="QuartzWrongDateResultMap">
+        SELECT q.`id`,
+        q.`job_name`,
+        q.`description`,
+        q.`wrong_quantity`,
+        q.`create_date`,
+        q.`update_date`
+        FROM
+        t_quartz_data q
+        WHERE 1 = 1
+        <if test="filter.jobName !=null and filter.jobName !=''">
+            and q.job_name= #{filter.jobName}
+        </if>
+        <if test="filter.startTime !=null">
+            and q.create_date &gt; #{filter.startTime}
+        </if>
+        <if test="filter.endTime !=null">
+            and q.create_date &lt; #{filter.endTime}
+        </if>
+    </select>
+
+    <select id="getWrongJobDateList" resultType="java.util.HashMap">
+        SELECT q.`id`,
+        q.`job_name`,
+        q.`description`,
+        q.`wrong_quantity`,
+        q.`create_date`,
+        q.`update_date`,
+        DATE_FORMAT(q.`create_date`,'%Y-%m-%d %H:00') AS nowTime
+        FROM
+        t_quartz_data q
+        WHERE 1 = 1
+        <if test="filter.jobName !=null and filter.jobName !=''">
+            and q.job_name= #{filter.jobName}
+        </if>
+        <if test="filter.startTime !=null">
+            and q.create_date &gt; #{filter.startTime}
+        </if>
+        <if test="filter.endTime !=null">
+            and q.create_date &lt; #{filter.endTime}
         </if>
     </select>
 </mapper>

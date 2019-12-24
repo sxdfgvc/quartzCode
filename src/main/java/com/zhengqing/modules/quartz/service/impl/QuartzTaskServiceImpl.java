@@ -1,8 +1,11 @@
 package com.zhengqing.modules.quartz.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.plugins.Page;
 import com.zhengqing.modules.quartz.dao.QuartzJobDto;
 import com.zhengqing.modules.quartz.dao.QuartzJobQueryDto;
+import com.zhengqing.modules.quartz.dao.QuartzWrongDateDto;
+import com.zhengqing.modules.quartz.dao.QuartzWrongQueryDto;
 import com.zhengqing.modules.quartz.mapper.QuartzTaskMapper;
 import com.zhengqing.modules.quartz.service.QuartzTaskService;
 import org.quartz.*;
@@ -10,6 +13,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class QuartzTaskServiceImpl implements QuartzTaskService {
@@ -80,5 +87,29 @@ public class QuartzTaskServiceImpl implements QuartzTaskService {
             logger.error("恢复定时任务出错:job:{},error:{}", jobDto.getName(), e);
         }
         return isSuccess;
+    }
+
+    @Override
+    public List<QuartzWrongDateDto> getWrongJobDate(QuartzWrongQueryDto jobDto) {
+        List<QuartzWrongDateDto> list=quartzTaskMapper.getWrongJobDate(jobDto);
+        return list;
+    }
+
+    @Override
+    public Map<String, Integer> getWrongJobDateList(QuartzWrongQueryDto jobDto) {
+        Map<String, Integer> map = new HashMap<>();
+        List<Map<String, Object>> mapList = quartzTaskMapper.getWrongJobDateList(jobDto);
+        if (mapList != null && mapList.size() > 0) {
+            for (Map<String, Object> mm : mapList) {
+                String nowTime = ObjectUtil.toString(mm.get("nowTime"));
+                int quarity = (int) mm.get("nowTime");
+                if (map.get(nowTime) != null) {
+                    map.put(nowTime, map.get(nowTime) + quarity);
+                } else {
+                    map.put(nowTime, quarity);
+                }
+            }
+        }
+        return map;
     }
 }

@@ -5,15 +5,22 @@ import com.zhengqing.modules.common.api.BaseController;
 import com.zhengqing.modules.common.dto.output.ApiResult;
 import com.zhengqing.modules.quartz.dao.QuartzJobDto;
 import com.zhengqing.modules.quartz.dao.QuartzJobQueryDto;
+import com.zhengqing.modules.quartz.dao.QuartzWrongDateDto;
+import com.zhengqing.modules.quartz.dao.QuartzWrongQueryDto;
 import com.zhengqing.modules.quartz.service.QuartzTaskService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.quartz.CronExpression;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * 定时任务相关操作
@@ -22,11 +29,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/quartz")
 @Api(tags = "定时任务相关操作")
 public class QuartzTaskController extends BaseController {
+    private static final Logger logger= LoggerFactory.getLogger(QuartzTaskController.class);
     @Autowired
     private QuartzTaskService quartzTaskService;
 
     @PostMapping(value = "/quartzList", produces = "application/json;charset=utf-8")
-    @ApiOperation(value = "获取定时任务列表分页", httpMethod =     "POST", response = QuartzJobDto.class, notes = "获取定时任务列表")
+    @ApiOperation(value = "获取定时任务列表分页", httpMethod = "POST", response = QuartzJobDto.class, notes = "获取定时任务列表")
     public ApiResult quartzList(@RequestBody QuartzJobQueryDto jobDto) {
         Page<QuartzJobDto> page = new Page<>(jobDto.getPage(), jobDto.getLimit());
         quartzTaskService.listPage(page, jobDto);
@@ -36,8 +44,8 @@ public class QuartzTaskController extends BaseController {
 
     @PostMapping(value = "/updateQuartzJob", produces = "application/json;charset=utf-8")
     @ApiOperation(value = "修改定时任务", httpMethod = "POST", response = String.class, notes = "修改定时任务")
-    public ApiResult updateQuartzJob(@RequestBody QuartzJobDto jobDto){
-        if(!CronExpression.isValidExpression(jobDto.getCronExpression())){
+    public ApiResult updateQuartzJob(@RequestBody QuartzJobDto jobDto) {
+        if (!CronExpression.isValidExpression(jobDto.getCronExpression())) {
             return ApiResult.fail("时间表达式错误!");
         }
         Boolean isSuccess = quartzTaskService.updateQuartzJob(jobDto);
@@ -61,7 +69,7 @@ public class QuartzTaskController extends BaseController {
 
     @PostMapping(value = "/pauseQuartzJob", produces = "application/json;charset=utf-8")
     @ApiOperation(value = "暂停定时任务", httpMethod = "POST", response = String.class, notes = "暂停定时任务")
-    public ApiResult pauseQuartzJob(@RequestBody QuartzJobQueryDto jobDto){
+    public ApiResult pauseQuartzJob(@RequestBody QuartzJobQueryDto jobDto) {
         Boolean isSuccess = quartzTaskService.pauseQuartzJob(jobDto);
         String str = "暂停定时任务成功!";
         if (!isSuccess) {
@@ -70,9 +78,9 @@ public class QuartzTaskController extends BaseController {
         return ApiResult.ok(str);
     }
 
-@PostMapping(value = "/resumeQuartzJob", produces = "application/json;charset=utf-8")
+    @PostMapping(value = "/resumeQuartzJob", produces = "application/json;charset=utf-8")
     @ApiOperation(value = "恢复定时任务", httpMethod = "POST", response = String.class, notes = "恢复定时任务")
-    public ApiResult resumeQuartzJob(@RequestBody QuartzJobQueryDto jobDto){
+    public ApiResult resumeQuartzJob(@RequestBody QuartzJobQueryDto jobDto) {
         Boolean isSuccess = quartzTaskService.resumeQuartzJob(jobDto);
         String str = "恢复定时任务成功!";
         if (!isSuccess) {
@@ -81,4 +89,29 @@ public class QuartzTaskController extends BaseController {
         return ApiResult.ok(str);
     }
 
+    @PostMapping(value = "/getWrongJobDate", produces = "application/json;charset=utf-8")
+    @ApiOperation(value = "获取错误定时任务数量", httpMethod = "POST", response = String.class, notes = "获取错误定时任务数量")
+    public ApiResult getWrongJobDate(@RequestBody QuartzWrongQueryDto jobDto) {
+        List<QuartzWrongDateDto> list = null;
+        try {
+            list = quartzTaskService.getWrongJobDate(jobDto);
+            return ApiResult.ok("获取错误定时任务数量成功", list);
+        } catch (Exception e) {
+            logger.error("错误:{}",e);
+            return ApiResult.fail("获取错误定时任务数量失败");
+        }
+    }
+
+    @PostMapping(value = "/getWrongJobDateList", produces = "application/json;charset=utf-8")
+    @ApiOperation(value = "获取错误定时任务全部数量", httpMethod = "POST", response = String.class, notes = "获取错误定时任务全部数量")
+    public ApiResult getWrongJobDateList(@RequestBody QuartzWrongQueryDto jobDto) {
+        Map<String,Integer> map = null;
+        try {
+            map = quartzTaskService.getWrongJobDateList(jobDto);
+            return ApiResult.ok("获取错误定时任务数量成功", map);
+        } catch (Exception e) {
+            logger.error("错误:{}",e);
+            return ApiResult.fail("获取错误定时任务数量失败");
+        }
+    }
 }
