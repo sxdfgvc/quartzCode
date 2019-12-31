@@ -26,4 +26,6 @@ public interface QuartzTaskService {
     List<QuartzWrongDateDto> getWrongJobDate(QuartzWrongQueryDto jobDto);
 
     Map<String,Integer> getWrongJobDateList(QuartzWrongQueryDto jobDto);
+
+    String triggerQuartzJobNow(List<QuartzJobDto> jobDto);
 }

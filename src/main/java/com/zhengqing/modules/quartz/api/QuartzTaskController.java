@@ -10,6 +10,7 @@ import com.zhengqing.modules.quartz.dao.QuartzWrongQueryDto;
 import com.zhengqing.modules.quartz.service.QuartzTaskService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import org.apache.commons.lang3.StringUtils;
 import org.quartz.CronExpression;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +30,7 @@ import java.util.Map;
 @RequestMapping("/api/quartz")
 @Api(tags = "定时任务相关操作")
 public class QuartzTaskController extends BaseController {
-    private static final Logger logger= LoggerFactory.getLogger(QuartzTaskController.class);
+    private static final Logger logger = LoggerFactory.getLogger(QuartzTaskController.class);
     @Autowired
     private QuartzTaskService quartzTaskService;
 
@@ -89,6 +90,20 @@ public class QuartzTaskController extends BaseController {
         return ApiResult.ok(str);
     }
 
+    @PostMapping(value = "/triggerQuartzJobNow", produces = "application/json;charset=utf-8")
+    @ApiOperation(value = "立即触发定时任务", httpMethod = "POST", response = String.class, notes = "立即触发定时任务")
+    public ApiResult triggerQuartzJobNow(@RequestBody List<QuartzJobDto> jobDto) {
+        if (jobDto.size() == 0) {
+            return ApiResult.fail("请选择需要触发的任务！");
+        }
+        String isSuccess = quartzTaskService.triggerQuartzJobNow(jobDto);
+        String str = "触发定时任务成功!";
+        if (StringUtils.isNotBlank(isSuccess)) {
+            str = "触发" + isSuccess + "定时任务失败!";
+        }
+        return ApiResult.ok(str);
+    }
+
     @PostMapping(value = "/getWrongJobDate", produces = "application/json;charset=utf-8")
     @ApiOperation(value = "获取错误定时任务数量", httpMethod = "POST", response = String.class, notes = "获取错误定时任务数量")
     public ApiResult getWrongJobDate(@RequestBody QuartzWrongQueryDto jobDto) {
@@ -97,7 +112,7 @@ public class QuartzTaskController extends BaseController {
             list = quartzTaskService.getWrongJobDate(jobDto);
             return ApiResult.ok("获取错误定时任务数量成功", list);
         } catch (Exception e) {
-            logger.error("错误:{}",e);
+            logger.error("错误:{}", e);
             return ApiResult.fail("获取错误定时任务数量失败");
         }
     }
@@ -105,12 +120,12 @@ public class QuartzTaskController extends BaseController {
     @PostMapping(value = "/getWrongJobDateList", produces = "application/json;charset=utf-8")
     @ApiOperation(value = "获取错误定时任务全部数量", httpMethod = "POST", response = String.class, notes = "获取错误定时任务全部数量")
     public ApiResult getWrongJobDateList(@RequestBody QuartzWrongQueryDto jobDto) {
-        Map<String,Integer> map = null;
+        Map<String, Integer> map = null;
         try {
             map = quartzTaskService.getWrongJobDateList(jobDto);
             return ApiResult.ok("获取错误定时任务数量成功", map);
         } catch (Exception e) {
-            logger.error("错误:{}",e);
+            logger.error("错误:{}", e);
             return ApiResult.fail("获取错误定时任务数量失败");
         }
     }

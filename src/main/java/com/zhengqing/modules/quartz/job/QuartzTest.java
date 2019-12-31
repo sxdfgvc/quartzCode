@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-@QuartzJob(name = "quartzTestFirst",cronExp = "0 0/1 * * * ? ",description = "定时任务测试one")
+@QuartzJob(name = "quartzTestFirst",cronExp = "0 0/30 * * * ?  ",description = "定时任务测试one",unschedule = true)
 public class QuartzTest implements Job {
     private Logger logger= LoggerFactory.getLogger(QuartzTest.class);
     @Autowired

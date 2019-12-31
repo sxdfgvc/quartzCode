@@ -8,12 +8,14 @@ import com.zhengqing.modules.quartz.dao.QuartzWrongDateDto;
 import com.zhengqing.modules.quartz.dao.QuartzWrongQueryDto;
 import com.zhengqing.modules.quartz.mapper.QuartzTaskMapper;
 import com.zhengqing.modules.quartz.service.QuartzTaskService;
+import org.apache.commons.lang.StringUtils;
 import org.quartz.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -111,5 +113,19 @@ public class QuartzTaskServiceImpl implements QuartzTaskService {
             }
         }
         return map;
+    }
+
+    @Override
+    public String triggerQuartzJobNow(List<QuartzJobDto> jobDto) {
+        List<String> errorList=new ArrayList<>();
+        for (QuartzJobDto quartzJobDto : jobDto) {
+            try {
+                scheduler.triggerJob(new JobKey(quartzJobDto.getName(),quartzJobDto.getJobGroupName()));
+            } catch (SchedulerException e) {
+                logger.error("触发{}定时任务失败",quartzJobDto.getName());
+                errorList.add(quartzJobDto.getName());
+            }
+        }
+        return StringUtils.join(errorList,",");
     }
 }
