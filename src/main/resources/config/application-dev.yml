@@ -5,6 +5,10 @@ server:
     #    context-path: /api
     application-display-name: code-generator
 
+crmUrl: https://crmuat.feihe.com/customized-service/v1
+excelUrl: /usr/local/emailFile/
+emailTitle: 数据监控_UAT异常监控
+
 spring:
     application:
         name: code-generator
@@ -13,7 +17,7 @@ spring:
     # 配置数据源
     datasource:
 #      url: jdbc:mysql://127.0.0.1:3306/firmustest?allowMultiQueries=true&useUnicode=true&characterEncoding=UTF8&zeroDateTimeBehavior=convertToNull&useSSL=false # MySQL在高版本需要指明是否进行SSL连接 解决则加上 &useSSL=false
-      url: jdbc:mysql://10.10.208.33:3306/firmus?characterEncoding=utf8 # MySQL在高版本需要指明是否进行SSL连接 解决则加上 &useSSL=false
+      url: jdbc:mysql://10.10.208.33:3306/firmus?characterEncoding=utf8&serverTimezone=Asia/Shanghai # MySQL在高版本需要指明是否进行SSL连接 解决则加上 &useSSL=false
 #      name: code-generator
 #      username: root
 #      password: 123456
@@ -67,6 +71,7 @@ spring:
               isClustered: true
               clusterCheckinInterval: 10000
               useProperties: false
+              acquireTriggersWithinLock: true
             threadPool:
               class: org.quartz.simpl.SimpleThreadPool
               threadCount: 10
@@ -121,6 +126,12 @@ mybatis-plus:
     # 解决oracle更新数据为null时无法转换报错，mysql不会出现此情况
     jdbc-type-for-null: 'null'
 
+memcached:
+  servers: 10.10.208.32:11211 10.10.210.60:11211
+  opTimeout: 3000
+  poolSize: 10
+  failureMode: false
+  enabled: true
 zhengqing:
     swagger:
         title: 代码生成器接口文档

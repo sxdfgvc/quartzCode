@@ -5,6 +5,9 @@ server:
     #    context-path: /api
     application-display-name: code-generator
 
+crmUrl: https://crm.feihe.com/customized-service/v1
+emailTitle: 数据监控_生产异常监控
+
 spring:
   application:
     name: code-generator

@@ -122,7 +122,7 @@ public class QuartzTaskServiceImpl implements QuartzTaskService {
             try {
                 scheduler.triggerJob(new JobKey(quartzJobDto.getName(),quartzJobDto.getJobGroupName()));
             } catch (SchedulerException e) {
-                logger.error("触发{}定时任务失败",quartzJobDto.getName());
+                logger.error("触发{}定时任务失败,e:{}",quartzJobDto.getName(),e);
                 errorList.add(quartzJobDto.getName());
             }
         }

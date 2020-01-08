@@ -100,6 +100,7 @@ public class QuartzTaskController extends BaseController {
         String str = "触发定时任务成功!";
         if (StringUtils.isNotBlank(isSuccess)) {
             str = "触发" + isSuccess + "定时任务失败!";
+            return ApiResult.fail(str);
         }
         return ApiResult.ok(str);
     }

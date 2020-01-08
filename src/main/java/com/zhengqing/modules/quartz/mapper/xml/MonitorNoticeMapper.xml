@@ -1,0 +1,425 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.zhengqing.modules.quartz.mapper.MonitorNoticeMapper">
+    <!--2.查询没有自动过审的订单-->
+    <select id="autoReviewAlarm" resultType="com.zhengqing.modules.quartz.dao.OrderPO">
+        SELECT
+          a.id,
+          a.orderNo,
+          a.memberId,
+          a.orderCreateTime
+        FROM
+          cs_order a
+        WHERE TIMESTAMPDIFF(
+            SECOND,
+            a.orderCreateTime,
+            SYSDATE()
+          ) > 7200
+          AND a.checkStatus = 0
+          AND a.orderStatus = 2
+          AND a.serviceStatus = 0
+    </select>
+
+    <!--3.多人领取同一张券-->
+    <select id="manyMemberReceiveOneCoupon" resultType="com.zhengqing.modules.quartz.dao.MemberCouponDO">
+         SELECT
+          *
+        FROM
+          cs_member_coupon
+        WHERE createTime > DATE_SUB(NOW(), INTERVAL 48 HOUR)
+          AND (couponType = '7'
+            OR couponType = '8')
+        GROUP BY couponId
+        HAVING COUNT(couponId) > 1
+    </select>
+
+    <!--4.一券多订单-->
+    <!--<select id="couponUsedByManyOrder" resultType="com.zhengqing.modules.quartz.dao.PaymentRecord">-->
+    <!--SELECT-->
+    <!--aa.*-->
+    <!--FROM-->
+    <!--(SELECT-->
+    <!--r.*-->
+    <!--FROM-->
+    <!--cs_payment_record r-->
+    <!--WHERE r.paidTime > DATE_SUB(NOW(), INTERVAL 48 HOUR)-->
+    <!--GROUP BY r.couponIds-->
+    <!--HAVING COUNT(r.couponIds) > 1) aa-->
+    <!--JOIN cs_member_coupon p-->
+    <!--ON aa.couponIds = p.couponId-->
+    <!--JOIN cs_order o-->
+    <!--ON aa.mergePaymentNo = o.orderNo-->
+    <!--WHERE p.couponType = '8'-->
+    <!--AND o.orderStatus != '6'-->
+    <!--AND o.orderStatus != '7'-->
+    <!--</select>-->
+    <select id="couponUsedByManyOrder" resultType="com.zhengqing.modules.quartz.dao.PaymentRecord">
+        SELECT
+          r.mergePaymentNo
+        FROM
+          cs_payment_record r
+          LEFT JOIN cs_order o
+            ON r.mergePaymentNo = o.orderNo
+            WHERE o.orderType = '3'
+            AND o.orderStatus != '6'
+            AND o.orderStatus != '7'
+        GROUP BY r.couponIds
+        HAVING COUNT(r.couponIds) > 1 ;
+    </select>
+
+    <!--前8小时的增量数据-->
+    <select id="couponUsedByManyOrderIncrement" resultType="com.zhengqing.modules.quartz.dao.PaymentRecord">
+        SELECT
+          r.mergePaymentNo
+        FROM
+          cs_payment_record r
+          LEFT JOIN cs_order o
+            ON r.mergePaymentNo = o.orderNo
+        WHERE o.orderType = '3'
+          AND o.orderStatus != '6'
+          AND o.orderStatus != '7'
+          AND r.paidTime > DATE_SUB(NOW(), INTERVAL 8 HOUR)
+        GROUP BY r.couponIds
+        HAVING COUNT(r.couponIds) > 1 ;
+    </select>
+
+    <!--5、一人多鹤礼卷监控-->
+    <select id="multipleMemberCoupon" resultType="com.zhengqing.modules.quartz.dao.MemberCouponPO">
+        SELECT
+        cmc.memberId
+        FROM
+        cs_member_coupon cmc
+        WHERE cmc.couponType = '8'
+        AND cmc.bizStatus <![CDATA[ <> ]]> 4
+        AND cmc.createTime > STR_TO_DATE(
+        '2019-09-19 00:00:00',
+        '%Y-%m-%d %H:%i:%s'
+        )
+        GROUP BY cmc.memberId
+        HAVING COUNT(cmc.memberId) > 1
+    </select>
+
+    <!--6、优惠券已使用优惠券状态未改变-->
+    <select id="getCouponStatusWrongInfo" resultType="java.lang.String">
+        SELECT
+        GROUP_CONCAT(couponNo) AS couponNos
+        FROM
+        (SELECT
+        o.orderNo,
+        o.id,
+        o.orderCreateTime,
+        m.couponIds
+        FROM
+        cs_order o,
+        cs_payment_record m
+        WHERE o.orderNo = m.mergePaymentNo
+        AND o.orderStatus != '6'
+        AND o.orderStatus != '7'
+        AND o.`orderCreateTime` >= DATE_SUB(NOW(), INTERVAL 48 HOUR)) aa,
+        cs_member_coupon c
+        WHERE aa.couponIds = c.couponId
+        AND c.bizStatus <![CDATA[ <> ]]> 3
+    </select>
+
+    <!--7、订单状态为已付款但支付表为未支付-->
+    <select id="getOrderStatusWrongInfo" resultType="java.lang.String">
+        SELECT
+          GROUP_CONCAT(o.`id`) AS ids
+        FROM
+          cs_order o,
+          cs_order_payable p
+        WHERE o.id = p.orderId
+          AND o.orderStatus = '2'
+          AND p.paymentStatus = '0'
+          AND o.`orderCreateTime` >= DATE_SUB(NOW(), INTERVAL 48 HOUR)
+    </select>
+
+    <!--8、订单已经取消，但是自动过审了-->
+    <select id="queryErrorOrder" resultType="com.zhengqing.modules.quartz.dao.OrderPO">
+        SELECT DISTINCT
+          a.orderId id
+        FROM
+          cs_order_log a
+        WHERE a.currentStatus = 3
+          AND a.originalStatus NOT IN (2, 3)
+          AND a.operateTime > DATE_SUB(SYSDATE(), INTERVAL 48 HOUR)
+    </select>
+
+    <!--9、超过20天没有自动签收的订单，但是自动过审了-->
+    <select id="getNotAutomaticOrderReceive" resultType="java.lang.String">
+        SELECT
+        COUNT(c.id) AS ids
+        FROM
+        cs_order c,
+        cs_order_receive r
+        WHERE c.id = r.orderId
+        AND c.orderStatus = '4'
+        AND r.endReceiveTime <![CDATA[ < ]]> NOW()
+    </select>
+
+    <!--超过20天已全部发货但未自动签收的订单总数为-->
+    <select id="getNotAutomaticReceiveDeliveryOrder" resultType="java.lang.String">
+        SELECT
+        c.orderId
+        FROM
+        cs_order_logistics c
+        LEFT JOIN cs_order o
+        ON c.orderId = o.id
+        LEFT JOIN cs_order_receive r
+        ON c.orderId = r.orderId
+        WHERE o.orderStatus = 4
+        AND r.endReceiveTime <![CDATA[ < ]]> NOW()
+        AND c.orderId NOT IN
+        (SELECT DISTINCT
+        (c.orderId)
+        FROM
+        cs_order_logistics c
+        WHERE c.expressNum = '')
+    </select>
+
+    <!--10.订单状态为已复核(3,未发货)却有运单号-->
+    <select id="getOrderStatusByNotYetShipped" resultType="java.lang.String">
+        SELECT
+          orderNo AS ids
+        FROM
+          cs_shipments_log
+        WHERE is_remind = 0
+          AND is_delete = 0
+          AND TYPE IN (1, 2)
+    </select>
+
+    <!--11、被自动过审定时任务过审的订单总数（从缓存查询）-->
+    <select id="getAutoReviewOrderQuantity" resultType="java.lang.Integer">
+        SELECT DISTINCT
+        a.orderId id
+        FROM
+        cs_order_log a
+        WHERE a.currentStatus = 3
+        AND a.originalStatus NOT IN (2, 3)
+        AND a.operateTime > DATE_SUB(SYSDATE(), INTERVAL 48 HOUR)
+    </select>
+
+    <!--计算内部会员错误计算金额第一步：查询已支付的订单-->
+    <select id="queryPayOrder" resultType="com.zhengqing.modules.quartz.dao.OrderPO">
+        SELECT
+          o.id,
+          o.isMember,
+          o.orderCreateTime
+        FROM
+          cs_order o,
+          cs_order_payable p
+        WHERE o.id = p.orderId
+          AND o.isMember = 1
+          AND p.paymentStatus = 1
+          AND o.orderCreateTime > DATE_ADD(NOW(), INTERVAL - 48 HOUR)
+    </select>
+
+
+
+    <select id="queryOrderTwoTFour" resultType="string">
+        SELECT
+        orderNo
+        FROM
+        `cs_order`
+        WHERE id IN
+        (SELECT
+        orderId
+        FROM
+        `cs_order_log`
+        WHERE originalStatus = 2
+        AND currentStatus = 4
+        AND operateTime <![CDATA[ < ]]> DATE_FORMAT(NOW(), '%Y-%m-%d %H:%m:%s'))
+        AND checkStatus = 0
+        AND orderstatus = 4
+    </select>
+
+    <select id="queryOrderSixToFour" resultType="string">
+        SELECT
+        orderNo
+        FROM
+        `cs_order`
+        WHERE id IN
+        (SELECT
+        orderId
+        FROM
+        `cs_order_log`
+        WHERE originalStatus = 6
+        AND currentStatus = 4
+        AND operateTime <![CDATA[ < ]]> DATE_FORMAT(NOW(), '%Y-%m-%d %H:%m:%s'))
+        AND orderstatus = 4
+    </select>
+
+    <select id="queryOrderSixToTwo" resultType="string">
+        SELECT
+        orderNo
+        FROM
+        `cs_order`
+        WHERE id IN
+        (SELECT
+        orderId
+        FROM
+        `cs_order_log`
+        WHERE originalStatus = 6
+        AND currentStatus = 2
+        AND operateTime <![CDATA[ < ]]> DATE_FORMAT(NOW(), '%Y-%m-%d %H:%m:%s'))
+        AND orderstatus = 2
+    </select>
+
+    <select id="queryOrderNoPackage" resultType="java.util.HashMap">
+        SELECT
+          o.orderNo,o.`orderStatus`
+        FROM
+          cs_order o
+        WHERE o.orderStatus IN (3, 4, 20)
+          AND NOT EXISTS
+          (SELECT
+            *
+          FROM
+            cs_order_logistics l
+          WHERE o.id = l.orderid
+            AND l.orderType = 1)
+    </select>
+
+    <select id="queryExecptionOrder" resultType="com.zhengqing.modules.quartz.dao.ExceptionOrderPO">
+        SELECT
+        o.orderNo,
+        o.orderStatus,
+        o.orderCreateTime,
+        mb.loginName
+        FROM
+        cs_order o
+        LEFT JOIN cs_order_item oi
+        ON oi.orderid = o.id
+        LEFT JOIN cs_member mb
+        ON o.memberId = mb.id
+        LEFT JOIN cs_product p
+        ON oi.productid = p.id
+        WHERE o.hasChildren = 0
+        AND o.parentOrderId = 0
+        AND orderStatus NOT IN (1, 2)
+        AND o.orderCreateTime > DATE_SUB(
+        DATE_FORMAT(NOW(), '%Y-%m-%d 23:59:59'),
+        INTERVAL 48 HOUR
+        )
+        AND o.orderCreateTime <![CDATA[ < ]]> DATE_SUB(
+        DATE_FORMAT(NOW(), '%Y-%m-%d 23:59:59'),
+        INTERVAL 24 HOUR
+        )
+        AND p.productCategory = 6
+        AND o.orderType = 0
+    </select>
+
+    <select id="queryOrderExpressUnSync" resultType="string">
+        SELECT
+        a.expressNum expressNum
+        FROM
+        cs_order_logistics a
+        LEFT JOIN cs_order_logistics_item b
+        ON a.id = b.orderLogisticsId
+        LEFT JOIN cs_order_item c
+        ON b.orderItemId = c.id
+        LEFT JOIN cs_order d
+        ON c.orderId = d.id
+        LEFT JOIN cs_shanghai_sku e
+        ON c.goodsId = e.xmyx_sku
+        WHERE d.orderNo = #{thirdOrderCode}
+        AND e.shanghai_sku IN
+        <foreach collection="skuIds" index="index" item="skuId" open="(" separator="," close=")">
+            #{skuId}
+        </foreach>
+    </select>
+
+    <select id="getInnerMemberPayAmoutAlarm" resultType="com.zhengqing.modules.quartz.dao.OrderPO">
+        SELECT
+        o.id,
+        o.isMember,
+        o.orderCreateTime,
+        o.`parentOrderId`,
+        o.`hasChildren`,
+        SUM(c.afterFoldingPrice) AS afterFoldingPrice,
+        p.`payableAmount`
+        FROM
+        cs_order o
+        LEFT JOIN cs_order_payable p
+        ON o.id = p.orderId
+        AND o.orderCreateTime > DATE_ADD(NOW(), INTERVAL - 48 HOUR)
+        AND o.isMember = 1
+        LEFT JOIN cs_order_item c
+        ON o.`id` = c.orderId
+        WHERE p.paymentStatus = 1 GROUP BY o.`id`
+    </select>
+
+    <select id="getAllParentSonOrder" resultType="com.zhengqing.modules.quartz.dao.OrderPO">
+         SELECT
+        c.`id`,
+        c.`orderNo`,
+        c.`orderStatus`,
+        c.`memberId`,
+        c.`hasChildren`,
+        c.`parentOrderId`,
+        c.`goodsPointAmount`,
+        c.`orderCreateTime`,
+        IFNULL(p.`id`,0) AS recordId
+        FROM
+        cs_order c
+        LEFT JOIN
+        cs_payment_record p
+        ON c.`orderNo`=p.`mergePaymentNo`
+        WHERE   c.orderCreateTime > DATE_ADD(NOW(), INTERVAL - 12 HOUR)
+        AND(
+        c.`hasChildren` = 1
+        OR c.`parentOrderId` > 0
+        )
+    </select>
+
+    <select id="queryErrorQuartz" resultType="string">
+        SELECT c.`JOB_NAME`,c.`TRIGGER_TYPE`,TRIGGER_STATE,c.`NEXT_FIRE_TIME`,c.`PREV_FIRE_TIME` FROM  qrtz_triggers c WHERE c.`TRIGGER_STATE` ='ERROR' OR (c.`NEXT_FIRE_TIME` &lt; (UNIX_TIMESTAMP(NOW()) * 1000-600000) AND c.`TRIGGER_STATE`!='COMPLETE')
+    </select>
+
+    <select id="getEmailAddress" resultType="string">
+        select email from cs_email_recipient where del=0
+    </select>
+
+    <select id="queryNoExpressNumOrder" resultType="java.util.HashMap">
+        SELECT DISTINCT
+        l.`operateTime`,
+        b.`orderNo`,
+        c.`code`,
+        c.`name`,
+        b.`orderCreateTime`
+        FROM
+        cs_order_logistics a
+        LEFT JOIN cs_order b
+        ON a.orderid = b.id
+        LEFT JOIN cs_merchant c
+        ON b.merchantid = c.id
+        LEFT JOIN cs_order_log l
+        ON b.`id`=l.`orderId`
+        WHERE b.orderStatus = 4
+        AND l.`remark`='已发货'
+        AND b.`lastModifiedTime` &lt; DATE_SUB(NOW(), INTERVAL 36 HOUR)
+        AND b.`orderCreateTime` &gt;= '2019-12-01'
+        AND c.code IN (
+        'A018',
+        'A003',
+        'G003',
+        'A001',
+        'A005',
+        'A008',
+        'A006',
+        'B011',
+        'B015',
+        'B012',
+        'B019',
+        'B021',
+        'B024',
+        'B026',
+        'B029',
+        'B031'
+        )
+        AND (
+        a.expressnum IS NULL
+        OR a.`expressNum` = ''
+        ) ORDER BY b.`orderCreateTime` ASC
+    </select>
+</mapper>

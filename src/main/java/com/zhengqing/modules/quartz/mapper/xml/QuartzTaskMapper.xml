@@ -45,8 +45,8 @@
         `QRTZ_TRIGGERS` a
         LEFT JOIN `QRTZ_CRON_TRIGGERS` b
         ON a.`TRIGGER_NAME` = b.`TRIGGER_NAME`
-        WHERE 1=1
-        <if test="filter.name != null">
+        WHERE a.TRIGGER_TYPE='CRON'
+        <if test="filter.name != null and filter.name !=''">
             and a.JOB_NAME= #{filter.name}
         </if>
     </select>
