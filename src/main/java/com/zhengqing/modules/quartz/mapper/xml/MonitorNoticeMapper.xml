@@ -377,7 +377,7 @@
     </select>
 
     <select id="getEmailAddress" resultType="string">
-        select email from cs_email_recipient where del=0
+        select email from cs_email_recipient where del=3 or del=#{emailStatus}
     </select>
 
     <select id="queryNoExpressNumOrder" resultType="java.util.HashMap">

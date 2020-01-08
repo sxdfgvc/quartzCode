@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -734,7 +735,15 @@ public class MonitorNoticeServiceImpl implements MonitorNoticeService {
         List<String> errorQuartzList = monitorNoticeMapper.queryErrorQuartz();
         if (CollectionUtil.isNotEmpty(errorQuartzList)) {
             String str = StringUtils.join(errorQuartzList, ",");
-            buffer.append(errorQuartzList.size() + "，jobName：" + str +" ");
+            buffer.append(errorQuartzList.size() + "，jobName：" + str + " ");
+            //执行定时任务补偿机制
+            String sql = "UPDATE qrtz_triggers SET `NEXT_FIRE_TIME` = UNIX_TIMESTAMP(NOW()) * 1000 + 600000, `TRIGGER_STATE` = 'WAITING' WHERE `JOB_GROUP` != 'AxonFramework-Events' AND `TRIGGER_STATE` != 'COMPLETE' AND `NEXT_FIRE_TIME` < UNIX_TIMESTAMP(NOW()) * 1000 - 600000";
+            try {
+                int successCount = jdbcTemplate.update(sql);
+                buffer.append("**********定时任务补偿修改状态条数 " + successCount);
+            } catch (DataAccessException e) {
+                buffer.append("**********定时任务补偿异常。");
+            }
         } else {
             buffer.append("0。");
         }
@@ -842,7 +851,6 @@ public class MonitorNoticeServiceImpl implements MonitorNoticeService {
                      * 					1002	非法的JSON格式
                      * 					1003	需传入加密验证码
                      */
-//                    log.info("状态码{},对应信息{}", dataObj.getString("Code"), dataObj.getString("Msg"));
                 }
             }
         } catch (Exception e) {
@@ -936,8 +944,8 @@ public class MonitorNoticeServiceImpl implements MonitorNoticeService {
     }
 
     @Override
-    public List<String> getEmailAddress() {
-        return monitorNoticeMapper.getEmailAddress();
+    public List<String> getEmailAddress(int emailStatus) {
+        return monitorNoticeMapper.getEmailAddress(emailStatus);
     }
 
     @Override
@@ -949,11 +957,11 @@ public class MonitorNoticeServiceImpl implements MonitorNoticeService {
             //生成Excle文件
             String excel = excelUrl + "NoExpressNumOrder" + DateUtil.format(new Date(), "yyyy-MM-dd") + ".xlsx";
             ExcelWriter writer = ExcelUtil.getWriter(excel);
-            writer.addHeaderAlias("code","店铺编码");
-            writer.addHeaderAlias("name","店铺名称");
-            writer.addHeaderAlias("orderNo","订单号");
-            writer.addHeaderAlias("orderCreateTime","下单时间");
-            writer.addHeaderAlias("operateTime","发货时间");
+            writer.addHeaderAlias("code", "店铺编码");
+            writer.addHeaderAlias("name", "店铺名称");
+            writer.addHeaderAlias("orderNo", "订单号");
+            writer.addHeaderAlias("orderCreateTime", "下单时间");
+            writer.addHeaderAlias("operateTime", "发货时间");
             writer.write(mapList, true);
             writer.close();
             str = "31、订单状态为已发货但是没有快递单号的订单总数为:" + mapList.size() + "。详情见附件";

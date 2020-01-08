@@ -120,7 +120,9 @@ public class QuartzTaskServiceImpl implements QuartzTaskService {
         List<String> errorList=new ArrayList<>();
         for (QuartzJobDto quartzJobDto : jobDto) {
             try {
-                scheduler.triggerJob(new JobKey(quartzJobDto.getName(),quartzJobDto.getJobGroupName()));
+                JobDataMap jobDataMap=new JobDataMap();
+                jobDataMap.putAsString("isManualTrigger",1);
+                scheduler.triggerJob(new JobKey(quartzJobDto.getName(),quartzJobDto.getJobGroupName()),jobDataMap);
             } catch (SchedulerException e) {
                 logger.error("触发{}定时任务失败,e:{}",quartzJobDto.getName(),e);
                 errorList.add(quartzJobDto.getName());

@@ -152,7 +152,7 @@ public interface MonitorNoticeService {
 
     String queryUnBindCoupon();
 
-    List<String> getEmailAddress();
+    List<String> getEmailAddress(int emailStatus);
 
     String queryNoExpressNumOrder();
 }

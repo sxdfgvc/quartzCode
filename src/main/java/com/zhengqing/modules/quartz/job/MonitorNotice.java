@@ -6,6 +6,7 @@ import cn.hutool.extra.mail.MailUtil;
 import com.zhengqing.modules.quartz.annotion.QuartzJob;
 import com.zhengqing.modules.quartz.service.MonitorNoticeService;
 import org.quartz.Job;
+import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 import org.slf4j.Logger;
@@ -29,6 +30,11 @@ public class MonitorNotice implements Job {
     @Override
     public void execute(JobExecutionContext jobExecutionContext) throws JobExecutionException {
         logger.info("预警定时任务开始：" + DateUtil.now());
+        int emailStatus = 0;
+        JobDataMap jobDataMap = jobExecutionContext.getTrigger().getJobDataMap();
+        if (jobDataMap != null && "1".equals(jobDataMap.getString("isManualTrigger"))) {
+            emailStatus = 2;
+        }
         String excel = excelUrl + "NoExpressNumOrder" + DateUtil.format(new Date(), "yyyy-MM-dd") + ".xlsx";
         long start = System.currentTimeMillis();
         try {
@@ -64,8 +70,8 @@ public class MonitorNotice implements Job {
             String content14 = monitorNoticeService.queryOrderSixToTwo();
             //15、订单状态正常，没有包裹
             String content15 = monitorNoticeService.queryOrderNoPackage();
-            /*
-             *  16、查询异常订单——梁立平
+
+            /*  16、查询异常订单——梁立平
              * 1.订单取消未退还积分
              * 2.订单关闭未退还积分
              * 3.未扣积分，订单关闭退还积分
@@ -75,6 +81,7 @@ public class MonitorNotice implements Job {
              * 7.订单签收未扣减积分
              * @return
              */
+
             List<String> contentList = monitorNoticeService.queryExecptionOrder();
             //17、查询电商修改的快递单号没有同步到星妈优选的数目——周树誉
             String content23 = monitorNoticeService.queryOrderExpressUnSync();
@@ -85,7 +92,7 @@ public class MonitorNotice implements Job {
             //异常状态定时任务
             String content30 = monitorNoticeService.queryErrorQuartz();
             String content31 = monitorNoticeService.queryUnBindCoupon();
-            String content32=monitorNoticeService.queryNoExpressNumOrder();
+            String content32 = monitorNoticeService.queryNoExpressNumOrder();
             content.append("<!DOCTYPE>" + "<div bgcolor='#f1fcfa' style='border:1px solid #d9f4ee; font-size:14px; color:#005aa0;padding-left:1px;padding-top:5px;padding-bottom:5px;'><span style='font-weight:bold;'>温馨提醒：</span>"
                     + "<div style='width:950px;font-family:arial;'>异常监控信息如下：<br/>");
             content.append("<h2 style='color:green;margin:0;padding:0;'>" + content1 + "</h2><br/>");
@@ -133,7 +140,8 @@ public class MonitorNotice implements Job {
             content.append("<p style='text-indent: 2em;margin:0;padding:0;'>&nbsp;&nbsp;&nbsp;&nbsp;Tips:订单状态为已发货但是超过36小时还没有快递单号的订单</p><br/><br/><br/>");
             content.append("本邮件由系统自动发出，请勿回复。</div></div>");
             logger.info("预警定时任务邮件内容为:" + content);
-            MailUtil.send(monitorNoticeService.getEmailAddress(), emailTitle, content.toString(), true, FileUtil.file(excel));
+            List<String> emailAddressList = monitorNoticeService.getEmailAddress(emailStatus);
+            MailUtil.send(emailAddressList, emailTitle, content.toString(), true, FileUtil.file(excel));
         } catch (Exception e) {
             logger.error("定时预警发生异常", e);
         }

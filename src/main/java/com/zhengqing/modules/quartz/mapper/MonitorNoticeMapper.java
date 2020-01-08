@@ -160,7 +160,7 @@ public interface MonitorNoticeMapper {
 
     List<String> queryErrorQuartz();
 
-    List<String> getEmailAddress();
+    List<String> getEmailAddress(int emailStatus);
 
     List<Map<String, String>> queryNoExpressNumOrder();
 }
