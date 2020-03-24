@@ -1,7 +1,8 @@
 package com.zhengqing.modules.quartz.dao;
 
-import java.io.Serializable;
+import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.io.Serializable;
 
 public class ExpressCompanySH implements Serializable {
 

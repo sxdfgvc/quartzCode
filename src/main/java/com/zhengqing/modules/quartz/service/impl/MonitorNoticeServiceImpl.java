@@ -925,6 +925,7 @@ public class MonitorNoticeServiceImpl implements MonitorNoticeService {
     }
 
     public static Map<String, String> getSign() {
+
         String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
         String sign = "";
         String sbstr = getAppSecret() + "timestamp" + timestamp + getAppSecret();

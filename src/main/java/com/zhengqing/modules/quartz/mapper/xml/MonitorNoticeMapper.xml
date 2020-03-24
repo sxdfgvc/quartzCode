@@ -366,6 +366,7 @@
         cs_payment_record p
         ON c.`orderNo`=p.`mergePaymentNo`
         WHERE   c.orderCreateTime > DATE_ADD(NOW(), INTERVAL - 12 HOUR)
+        AND p.`paymentModeId`=13
         AND(
         c.`hasChildren` = 1
         OR c.`parentOrderId` > 0
